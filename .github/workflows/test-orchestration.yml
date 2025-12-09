@@ -93,8 +93,11 @@ jobs:
           name: test-database
           path: data/
       
+      - name: Create reports directory
+        run: mkdir -p reports/api
+      
       - name: Run API tests
-        run: npm run test:api -- --ci --coverage
+        run: npm run test:api -- --ci --json --outputFile=reports/api/results.json
         continue-on-error: true
       
       - name: Upload API test results
@@ -102,10 +105,9 @@ jobs:
         if: always()
         with:
           name: api-test-results
-          path: |
-            reports/api/
-            reports/coverage/
+          path: reports/api/
           retention-days: 30
+          if-no-files-found: warn
 
   # ===== E2E Tests =====
   e2e-tests:
@@ -135,6 +137,9 @@ jobs:
           name: test-database
           path: data/
       
+      - name: Create reports directory
+        run: mkdir -p reports/e2e
+      
       - name: Run E2E tests
         run: npm run test:e2e -- --project=chromium
         continue-on-error: true
@@ -144,11 +149,9 @@ jobs:
         if: always()
         with:
           name: e2e-test-results
-          path: |
-            reports/e2e/
-            test-results/
-            playwright-report/
+          path: reports/e2e/
           retention-days: 30
+          if-no-files-found: warn
 
   # ===== Performance Tests =====
   performance-tests:
