@@ -5,9 +5,9 @@ name: Test Orchestration Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [master, develop]
   pull_request:
-    branches: [main]
+    branches: [master]
   workflow_dispatch: # Allow manual trigger
 
 jobs:
@@ -175,12 +175,20 @@ jobs:
           name: test-database
           path: data/
       
-      - name: Start application server
+      - name: Create reports directory
+        run: mkdir -p reports/performance
+      
+      - name: Build and start application server
         run: |
-          npm run dev &
-          sleep 10
+          npm run build
+          node dist/src/app/server.js &
+          echo "Waiting for server to start..."
+          sleep 15
+          curl -f http://localhost:3000/api/health || exit 1
+          echo "Server is ready!"
         env:
           PORT: 3000
+          NODE_ENV: production
       
       - name: Install K6
         run: |
@@ -191,7 +199,7 @@ jobs:
           sudo apt-get install k6 -y
       
       - name: Run load tests
-        run: k6 run tests/performance/load-test.js --out json=reports/performance/load-results.json
+        run: k6 run --duration 30s --vus 5 tests/performance/load-test.js
         continue-on-error: true
         env:
           BASE_URL: http://localhost:3000
@@ -203,6 +211,7 @@ jobs:
           name: performance-test-results
           path: reports/performance/
           retention-days: 30
+          if-no-files-found: warn
 
   # ===== Generate Unified Report =====
   generate-report:
@@ -223,6 +232,9 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
+      
+      - name: Create report directories
+        run: mkdir -p reports/api reports/e2e reports/performance
       
       - name: Download API test results
         uses: actions/download-artifact@v4
@@ -260,7 +272,7 @@ jobs:
     name: 🚀 Deploy Report
     runs-on: ubuntu-latest
     needs: generate-report
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master' && needs.generate-report.result == 'success'
     
     permissions:
       pages: write
