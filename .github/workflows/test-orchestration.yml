@@ -291,6 +291,23 @@ jobs:
           name: unified-test-report
           path: reports/
       
+      - name: Create index.html redirect
+        run: |
+          cat > reports/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Test Report</title>
+            <meta http-equiv="refresh" content="0; url=unified-report.html">
+            <link rel="canonical" href="unified-report.html">
+          </head>
+          <body>
+            <p>Redirecting to <a href="unified-report.html">Test Report</a>...</p>
+          </body>
+          </html>
+          EOF
+      
       - name: Setup Pages
         uses: actions/configure-pages@v4
         continue-on-error: true
