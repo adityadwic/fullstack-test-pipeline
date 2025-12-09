@@ -1,0 +1,309 @@
+# Test Orchestration Pipeline
+# Complete CI/CD pipeline for API, E2E, and Performance testing
+
+name: Test Orchestration Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  # ===== Build Environment =====
+  build:
+    name: 🏗️ Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build TypeScript
+        run: npm run build
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+          retention-days: 1
+
+  # ===== Seed Test Data =====
+  seed:
+    name: 🌱 Seed Data
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Seed database
+        run: npm run seed
+      
+      - name: Upload seeded database
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-database
+          path: data/
+          retention-days: 1
+
+  # ===== API Tests =====
+  api-tests:
+    name: 🔌 API Tests
+    runs-on: ubuntu-latest
+    needs: seed
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Download seeded database
+        uses: actions/download-artifact@v4
+        with:
+          name: test-database
+          path: data/
+      
+      - name: Run API tests
+        run: npm run test:api -- --ci --coverage
+        continue-on-error: true
+      
+      - name: Upload API test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-test-results
+          path: |
+            reports/api/
+            reports/coverage/
+          retention-days: 30
+
+  # ===== E2E Tests =====
+  e2e-tests:
+    name: 🎭 E2E Tests
+    runs-on: ubuntu-latest
+    needs: api-tests
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      
+      - name: Download seeded database
+        uses: actions/download-artifact@v4
+        with:
+          name: test-database
+          path: data/
+      
+      - name: Run E2E tests
+        run: npm run test:e2e -- --project=chromium
+        continue-on-error: true
+      
+      - name: Upload E2E test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results
+          path: |
+            reports/e2e/
+            test-results/
+            playwright-report/
+          retention-days: 30
+
+  # ===== Performance Tests =====
+  performance-tests:
+    name: ⚡ Performance Tests
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Download seeded database
+        uses: actions/download-artifact@v4
+        with:
+          name: test-database
+          path: data/
+      
+      - name: Start application server
+        run: |
+          npm run dev &
+          sleep 10
+        env:
+          PORT: 3000
+      
+      - name: Install K6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6 -y
+      
+      - name: Run load tests
+        run: k6 run tests/performance/load-test.js --out json=reports/performance/load-results.json
+        continue-on-error: true
+        env:
+          BASE_URL: http://localhost:3000
+      
+      - name: Upload performance test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-test-results
+          path: reports/performance/
+          retention-days: 30
+
+  # ===== Generate Unified Report =====
+  generate-report:
+    name: 📊 Generate Report
+    runs-on: ubuntu-latest
+    needs: [api-tests, e2e-tests, performance-tests]
+    if: always()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Download API test results
+        uses: actions/download-artifact@v4
+        with:
+          name: api-test-results
+          path: reports/
+        continue-on-error: true
+      
+      - name: Download E2E test results
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-test-results
+          path: reports/
+        continue-on-error: true
+      
+      - name: Download performance test results
+        uses: actions/download-artifact@v4
+        with:
+          name: performance-test-results
+          path: reports/performance/
+        continue-on-error: true
+      
+      - name: Generate unified report
+        run: npm run report:generate
+      
+      - name: Upload unified report
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-test-report
+          path: reports/
+          retention-days: 90
+
+  # ===== Deploy Report to GitHub Pages =====
+  deploy-report:
+    name: 🚀 Deploy Report
+    runs-on: ubuntu-latest
+    needs: generate-report
+    if: github.ref == 'refs/heads/main'
+    
+    permissions:
+      pages: write
+      id-token: write
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Download unified report
+        uses: actions/download-artifact@v4
+        with:
+          name: unified-test-report
+          path: reports/
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Upload to Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: reports/
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ===== Notify on Failure =====
+  notify:
+    name: 📧 Notify
+    runs-on: ubuntu-latest
+    needs: [api-tests, e2e-tests, performance-tests]
+    if: failure()
+    
+    steps:
+      - name: Create failure summary
+        run: |
+          echo "## ❌ Test Pipeline Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "One or more test stages failed. Please check the logs for details." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Failed Jobs:" >> $GITHUB_STEP_SUMMARY
+          echo "- API Tests: ${{ needs.api-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- E2E Tests: ${{ needs.e2e-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Performance Tests: ${{ needs.performance-tests.result }}" >> $GITHUB_STEP_SUMMARY

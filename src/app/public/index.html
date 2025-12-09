@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test E-Commerce Store</title>
+  <meta name="description" content="Test E-Commerce Store for automation testing">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header" id="header">
+    <div class="container">
+      <a href="/" class="logo" id="logo">
+        <span class="logo-icon">🛒</span>
+        <span class="logo-text">TestStore</span>
+      </a>
+      <nav class="nav" id="nav">
+        <a href="#products" class="nav-link" data-testid="nav-products">Products</a>
+        <a href="#categories" class="nav-link" data-testid="nav-categories">Categories</a>
+        <a href="#about" class="nav-link" data-testid="nav-about">About</a>
+      </nav>
+      <div class="header-actions">
+        <button class="btn btn-ghost" id="search-btn" data-testid="search-btn">
+          <span class="icon">🔍</span>
+        </button>
+        <button class="btn btn-ghost cart-btn" id="cart-btn" data-testid="cart-btn">
+          <span class="icon">🛒</span>
+          <span class="cart-count" id="cart-count">0</span>
+        </button>
+        <button class="btn btn-primary" id="login-btn" data-testid="login-btn">Login</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero" id="hero">
+    <div class="container">
+      <div class="hero-content">
+        <h1 class="hero-title" data-testid="hero-title">Welcome to TestStore</h1>
+        <p class="hero-subtitle">Discover amazing products at great prices</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary btn-lg" id="shop-now-btn" data-testid="shop-now-btn">Shop Now</button>
+          <button class="btn btn-outline btn-lg" id="learn-more-btn" data-testid="learn-more-btn">Learn More</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Categories Section -->
+  <section class="categories" id="categories">
+    <div class="container">
+      <h2 class="section-title">Shop by Category</h2>
+      <div class="category-grid" id="category-grid">
+        <div class="category-card" data-category="electronics" data-testid="category-electronics">
+          <span class="category-icon">💻</span>
+          <h3>Electronics</h3>
+        </div>
+        <div class="category-card" data-category="clothing" data-testid="category-clothing">
+          <span class="category-icon">👕</span>
+          <h3>Clothing</h3>
+        </div>
+        <div class="category-card" data-category="books" data-testid="category-books">
+          <span class="category-icon">📚</span>
+          <h3>Books</h3>
+        </div>
+        <div class="category-card" data-category="home" data-testid="category-home">
+          <span class="category-icon">🏠</span>
+          <h3>Home & Garden</h3>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Products Section -->
+  <section class="products" id="products">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Featured Products</h2>
+        <div class="filters">
+          <select id="category-filter" class="filter-select" data-testid="category-filter">
+            <option value="">All Categories</option>
+            <option value="electronics">Electronics</option>
+            <option value="clothing">Clothing</option>
+            <option value="books">Books</option>
+            <option value="home">Home & Garden</option>
+          </select>
+          <select id="sort-filter" class="filter-select" data-testid="sort-filter">
+            <option value="default">Default</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="price-high">Price: High to Low</option>
+            <option value="name">Name: A-Z</option>
+          </select>
+        </div>
+      </div>
+      <div class="product-grid" id="product-grid">
+        <!-- Products will be loaded dynamically -->
+        <div class="loading" id="products-loading">
+          <div class="spinner"></div>
+          <p>Loading products...</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cart Sidebar -->
+  <div class="cart-overlay" id="cart-overlay" data-testid="cart-overlay"></div>
+  <aside class="cart-sidebar" id="cart-sidebar" data-testid="cart-sidebar">
+    <div class="cart-header">
+      <h2>Your Cart</h2>
+      <button class="btn btn-ghost" id="close-cart" data-testid="close-cart">✕</button>
+    </div>
+    <div class="cart-items" id="cart-items">
+      <p class="cart-empty" id="cart-empty">Your cart is empty</p>
+    </div>
+    <div class="cart-footer" id="cart-footer">
+      <div class="cart-total">
+        <span>Total:</span>
+        <span class="total-amount" id="total-amount">$0.00</span>
+      </div>
+      <button class="btn btn-primary btn-block" id="checkout-btn" data-testid="checkout-btn" disabled>
+        Proceed to Checkout
+      </button>
+    </div>
+  </aside>
+
+  <!-- Login Modal -->
+  <div class="modal-overlay" id="login-modal" data-testid="login-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Login</h2>
+        <button class="btn btn-ghost modal-close" id="close-login" data-testid="close-login">✕</button>
+      </div>
+      <form class="modal-body" id="login-form" data-testid="login-form">
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" name="email" placeholder="Enter your email" required data-testid="login-email">
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" name="password" placeholder="Enter your password" required data-testid="login-password">
+        </div>
+        <div class="form-error" id="login-error" data-testid="login-error"></div>
+        <button type="submit" class="btn btn-primary btn-block" id="login-submit" data-testid="login-submit">Login</button>
+      </form>
+      <div class="modal-footer">
+        <p>Don't have an account? <a href="#" id="show-register" data-testid="show-register">Register</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Register Modal -->
+  <div class="modal-overlay" id="register-modal" data-testid="register-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Register</h2>
+        <button class="btn btn-ghost modal-close" id="close-register" data-testid="close-register">✕</button>
+      </div>
+      <form class="modal-body" id="register-form" data-testid="register-form">
+        <div class="form-group">
+          <label for="register-name">Full Name</label>
+          <input type="text" id="register-name" name="name" placeholder="Enter your name" required data-testid="register-name">
+        </div>
+        <div class="form-group">
+          <label for="register-email">Email</label>
+          <input type="email" id="register-email" name="email" placeholder="Enter your email" required data-testid="register-email">
+        </div>
+        <div class="form-group">
+          <label for="register-password">Password</label>
+          <input type="password" id="register-password" name="password" placeholder="Create a password" required data-testid="register-password">
+        </div>
+        <div class="form-error" id="register-error" data-testid="register-error"></div>
+        <button type="submit" class="btn btn-primary btn-block" id="register-submit" data-testid="register-submit">Register</button>
+      </form>
+      <div class="modal-footer">
+        <p>Already have an account? <a href="#" id="show-login" data-testid="show-login">Login</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Checkout Modal -->
+  <div class="modal-overlay" id="checkout-modal" data-testid="checkout-modal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2>Checkout</h2>
+        <button class="btn btn-ghost modal-close" id="close-checkout" data-testid="close-checkout">✕</button>
+      </div>
+      <form class="modal-body" id="checkout-form" data-testid="checkout-form">
+        <h3>Shipping Address</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="shipping-address">Address</label>
+            <input type="text" id="shipping-address" name="address" placeholder="Street address" required data-testid="shipping-address">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="shipping-city">City</label>
+            <input type="text" id="shipping-city" name="city" placeholder="City" required data-testid="shipping-city">
+          </div>
+          <div class="form-group">
+            <label for="shipping-zip">ZIP Code</label>
+            <input type="text" id="shipping-zip" name="zip" placeholder="ZIP" required data-testid="shipping-zip">
+          </div>
+        </div>
+        <div class="order-summary" id="order-summary">
+          <!-- Order summary will be populated dynamically -->
+        </div>
+        <div class="form-error" id="checkout-error" data-testid="checkout-error"></div>
+        <button type="submit" class="btn btn-primary btn-block" id="place-order-btn" data-testid="place-order-btn">Place Order</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Order Confirmation Modal -->
+  <div class="modal-overlay" id="confirmation-modal" data-testid="confirmation-modal">
+    <div class="modal">
+      <div class="modal-body confirmation-content">
+        <div class="confirmation-icon">✓</div>
+        <h2>Order Placed Successfully!</h2>
+        <p>Your order ID: <strong id="order-id" data-testid="order-id"></strong></p>
+        <p>Thank you for your purchase!</p>
+        <button class="btn btn-primary" id="continue-shopping" data-testid="continue-shopping">Continue Shopping</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Footer -->
+  <footer class="footer" id="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <span class="logo-icon">🛒</span>
+          <span class="logo-text">TestStore</span>
+          <p>Your trusted online shopping destination</p>
+        </div>
+        <div class="footer-links">
+          <h4>Quick Links</h4>
+          <a href="#products">Products</a>
+          <a href="#categories">Categories</a>
+          <a href="#about">About Us</a>
+        </div>
+        <div class="footer-links">
+          <h4>Support</h4>
+          <a href="#">Contact Us</a>
+          <a href="#">FAQ</a>
+          <a href="#">Shipping Info</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2024 TestStore. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

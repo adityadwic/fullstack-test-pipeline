@@ -1,0 +1,57 @@
+# Docker Compose for Test Orchestration System
+# Development and test environment setup
+
+version: '3.8'
+
+services:
+  # Main application service
+  app:
+    build:
+      context: .
+      target: production
+    container_name: test-platform-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_PATH=/app/data/test.db
+    volumes:
+      - app-data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - test-network
+    restart: unless-stopped
+
+  # Development mode (with hot reload)
+  app-dev:
+    build:
+      context: .
+      target: base
+    container_name: test-platform-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+    networks:
+      - test-network
+    profiles:
+      - dev
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  app-data:
+  reports:

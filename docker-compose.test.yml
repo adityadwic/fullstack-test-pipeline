@@ -1,0 +1,113 @@
+# Docker Compose for Test Execution
+# Full test orchestration with all test types
+
+version: '3.8'
+
+services:
+  # Application under test
+  app:
+    build:
+      context: .
+      target: production
+    container_name: test-sut
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=test
+      - PORT=3000
+      - DB_PATH=/app/data/test.db
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - test-network
+
+  # Test data seeder
+  seeder:
+    build:
+      context: .
+      target: test-runner
+    container_name: test-seeder
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      - BASE_URL=http://app:3000
+      - API_URL=http://app:3000/api
+    command: npm run seed
+    networks:
+      - test-network
+
+  # API tests
+  api-tests:
+    build:
+      context: .
+      target: test-runner
+    container_name: test-api
+    depends_on:
+      seeder:
+        condition: service_completed_successfully
+    environment:
+      - BASE_URL=http://app:3000
+      - API_URL=http://app:3000/api
+    volumes:
+      - ./reports:/app/reports
+    command: npm run test:api
+    networks:
+      - test-network
+
+  # E2E tests (Playwright)
+  e2e-tests:
+    build:
+      context: .
+      target: test-runner
+    container_name: test-e2e
+    depends_on:
+      api-tests:
+        condition: service_completed_successfully
+    environment:
+      - BASE_URL=http://app:3000
+      - CI=true
+    volumes:
+      - ./reports:/app/reports
+    command: npx playwright test --project=chromium
+    networks:
+      - test-network
+
+  # Performance tests (K6)
+  perf-tests:
+    image: grafana/k6:latest
+    container_name: test-perf
+    depends_on:
+      e2e-tests:
+        condition: service_completed_successfully
+    environment:
+      - BASE_URL=http://app:3000
+    volumes:
+      - ./tests/performance:/scripts:ro
+      - ./reports/performance:/output
+    command: run --out json=/output/results.json /scripts/load-test.js
+    networks:
+      - test-network
+
+  # Report generator
+  report-generator:
+    build:
+      context: .
+      target: test-runner
+    container_name: test-reporter
+    depends_on:
+      perf-tests:
+        condition: service_completed_successfully
+    volumes:
+      - ./reports:/app/reports
+    command: npm run report:generate
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge
